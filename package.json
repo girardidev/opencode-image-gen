@@ -1,0 +1,33 @@
+{
+  "name": "opencode-image-gen",
+  "version": "0.1.0",
+  "description": "OpenCode plugin that generates images with your ChatGPT Plus/Pro subscription",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "files": [
+    "index.ts",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "image-generation",
+    "chatgpt"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.18.34",
+    "@opencode/plugin": "^2.0.22"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.0"
+  }
+}

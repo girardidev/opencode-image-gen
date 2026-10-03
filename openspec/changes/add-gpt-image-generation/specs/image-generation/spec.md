@@ -61,15 +61,15 @@ The plugin SHALL parse the server-sent event stream and take the image from the 
 - **THEN** the tool fails with an error that includes the status and the backend's message, and never includes the access token
 
 ### Requirement: Tool result
-On success, the tool SHALL return a text summary containing the absolute output path, format, byte size, and `revised_prompt` when available. On OpenCode V2, the result SHALL also include the image as file content so the model can inspect it.
+On success, the tool SHALL return a text summary containing the absolute output path, format, byte size, and `revised_prompt` when available. The result SHALL also include the image as a `data:` URI file attachment so the model can inspect it.
 
 #### Scenario: V2 result includes the image
 - **WHEN** generation succeeds on OpenCode V2
-- **THEN** the tool result contains a text part with the saved path and a file part with the image's media type and data
+- **THEN** the tool result contains a text part with the saved path and a file part with the image's mime type and data URI
 
-#### Scenario: V1 result is text only
+#### Scenario: V1 result includes an attachment
 - **WHEN** generation succeeds on OpenCode V1
-- **THEN** the tool returns a string with the saved absolute path and metadata
+- **THEN** the tool returns `output` with the saved absolute path and metadata, plus an `attachments` entry with the image's mime type and data URI
 
 ### Requirement: Cancellation and timeout
 The plugin SHALL abort the backend request when the tool's abort signal fires, and SHALL fail after a configurable timeout (default 300 seconds).

@@ -35,6 +35,8 @@ src/
   options.ts        merge ctx.options + env vars + defaults
 ```
 
+A root `index.ts` re-exports `src/index.ts`. When V2 loads a local plugin directory it resolves `<dir>/server` or `<dir>/index` directly and ignores `package.json` `exports`; packages loaded by name do use `exports`.
+
 The core takes a small interface (`{ directory, signal, progress?, getV2Credential? }`) so both adapters stay a few dozen lines. Alternative considered: two separate packages. Rejected, because the V2 docs explicitly support a combined default export and that keeps one install.
 
 ### Credentials: prefer OpenCode's own connection, read-only where possible
@@ -42,7 +44,7 @@ V2's `ctx.integration.connection.active("openai")` + `resolve()` returns a crede
 
 Alternative: always read `~/.codex/auth.json` like the existing libraries. Rejected as the primary source because it forces users to install and log into the Codex CLI even when OpenCode already has the login.
 
-Open detail to confirm during implementation: the exact shape returned by `connection.resolve()` for OAuth (field names for access token, expiry, and account ID). If it lacks `accountId`, derive it from the JWT claim.
+Confirmed against `@opencode/plugin@2.0.22`: `connection.resolve()` returns `Credential.Value`, which for OAuth is `{ type: "oauth", methodID, access, refresh, expires, metadata? }`. OpenCode's built-in OpenAI plugin stores the account ID as `metadata.accountID` and registers a `refresh` callback for its ChatGPT methods (`chatgpt-browser`, `chatgpt-headless`), so OpenCode owns refresh. If `metadata.accountID` is missing, derive it from the JWT claim. The built-in plugin sends `originator: opencode` and `chatgpt-account-id` to `https://chatgpt.com/backend-api/codex`, which we mirror.
 
 ### Request shape
 Headers: `Authorization: Bearer`, `ChatGPT-Account-ID`, `OpenAI-Beta: responses=experimental`, `originator: opencode`, `session_id: <uuid>`, `accept: text/event-stream`. Body: `model` (default `gpt-5.5`), `instructions: ""`, `input` (user message with `input_text` + `input_image` data URLs), `tools: [{ type: "image_generation", output_format, size, quality, background, model? }]`, `tool_choice: { type: "image_generation" }`, `parallel_tool_calls: false`, `stream: true`, `store: false`.
@@ -56,7 +58,9 @@ Use a hand-written incremental parser over `response.body` (split on blank lines
 Resolve `outputPath` against the session directory (V2: tool context / `ctx.location.directory`; V1: `context.directory`), `mkdir -p` the parent, refuse to overwrite unless `overwrite: true`, and write bytes only after a complete image is decoded, so an aborted request never leaves a partial file. The format is inferred from the extension when `format` is absent.
 
 ### Tool result
-V2: `{ content: [text summary, { type: "file", mediaType, data/uri }] }`, following the `Tool.FileContent` schema, so vision-capable models can verify the image. The exact field names are checked against `/api#schema-Tool.FileContent` during implementation. V1: a plain string summary.
+V2: `{ output, content: [{ type: "text", text }, { type: "file", uri: "data:<mime>;base64,...", mime, name }] }`, matching `Tool.FileContent` (confirmed: built-in tools and MCP results use `data:` URIs the same way), so vision-capable models can verify the image. V1 (`@opencode-ai/plugin@1.18`): `{ title, output, metadata, attachments: [{ type: "file", mime, url: data URI, filename }] }`. V1 also exposes `context.ask`, which is used to request `edit` permission for the output path.
+
+The V2 tool context has no directory. The session directory comes from `ctx.session.get({ sessionID }).location.directory`, falling back to `ctx.location.directory`.
 
 ### Validation
 V2 tool input uses JSON Schema with `additionalProperties: false`. V1 uses the `tool.schema` Zod helpers. Semantic checks (extension/format mismatch, transparent+jpeg, file exists, reference images readable) live in the core so both versions behave the same.
