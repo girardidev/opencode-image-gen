@@ -1,6 +1,6 @@
 {
   "name": "opencode-image-gen",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenCode plugin that generates images with your ChatGPT Plus/Pro subscription",
   "type": "module",
   "license": "MIT",
